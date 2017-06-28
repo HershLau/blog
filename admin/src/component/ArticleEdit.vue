@@ -1,7 +1,7 @@
 <template>
 	<div class="articel-edit-wrap">
         <div class="article-title">
-            <input type="text" v-model="articleTitle">
+            <input placeholder="请输入文章标题" type="text" v-model="articleTitle">
         </div>
         <div class="article-toolbar">
             <div class="label">
@@ -21,7 +21,7 @@
                 <el-button type="primary" size="small" @click="publishedArticles">发布文章</el-button>
             </div>
         </div>
-        <textarea id="editor"></textarea>
+        <textarea id="editor" placeholder="快来开始写博客吧"></textarea>
 	</div>
 </template>
 
@@ -35,7 +35,7 @@ import { Message } from 'element-ui';
 export default {
 	data () {
         return {
-            articleTitle: '请输入文章标题',
+            articleTitle: '',
             content: '',
             tags: [],
             list: []
@@ -103,7 +103,7 @@ export default {
                 respone => console.log(respone)
             )
         } else {
-            smde.value("快来开始写博客吧");
+            smde.value("");
         }
 
         // 请求标签数据列表

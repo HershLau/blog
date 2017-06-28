@@ -18,11 +18,14 @@ var articleSchema = new mongoose.Schema({
   state: String,
   label: String,
   uid: String,
-  tids: [String]
+  tags: [String]
 })
 
 var tagSchema = new mongoose.Schema({
-  tagName: String
+  tagName: String,
+  tagNumber: Number,
+  uid: String,
+  atitle: [String]
 })
 
 var Models = {

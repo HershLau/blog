@@ -12,19 +12,27 @@ var findUser = function (account, pwd) {
 router.post('/api/login', function (req, res) {
   var sess = req.session;
   var user = findUser(req.body.account, req.body.pwd);
-  console.log(user)
   if (user) {
     req.session.regenerate(function (err) {
       if (err) {
         return res.json({code: 2, msg: '登录失败'});
       }
       req.session.loginUser = user.account;
-      db.User(user).save(function(err) {
+      db.User.findOne({account: user.account}, function (err, doc) {
         if (err) {
-          res.status(500).send;
           return
         }
-        res.json({code: 0, msg: '登录成功'});
+        if (!doc) {
+          db.User(user).save(function(err) {
+            if (err) {
+              res.status(500).send;
+              return
+            }
+            res.json({code: 0, msg: '登录成功'});
+          })
+        } else  {
+          res.json({code: 0, msg: '登录成功'});
+        }
       })
     });
   } else {
@@ -96,20 +104,22 @@ router.post('/api/articleDetails', function (req, res) {
 });
 // 文章保存路由
 router.post('/api/saveArticle', function (req, res) {
-  new db.Article(req.body.articleInformation).save(function (error, adoc) {
+  new db.Article(req.body.articleInformation).save(function (error) {
     if (error) {
       res.status(500).send()
       return
     }
     if (req.body.articleInformation.state != 'draft') {
-      db.Article.findOne({_id: adoc._id}, '_id', function (err, article) {
+      db.Article.find({label:req.body.articleInformation.label},function(err, ArticleList){
         if (err) {
           return
         }
-        db.TagList.findOne({tagName: req.body.articleInformation.label}, function (err, tdoc) {
-          tdoc.atids.push(article._id)
-          db.TagList(tdoc).save(function (error) {
-          })
+        db.TagList.find({tagName:req.body.articleInformation.label}, function(err, docs){
+          if(docs.length>0){
+            console.log(ArticleList.length)
+            docs[0].tagNumber = ArticleList.length
+            db.TagList(docs[0]).save(function(error){})
+          }
         })
       })
     }
@@ -123,6 +133,8 @@ router.post('/api/updateArticle', function (req, res) {
     if (err) {
       return
     }
+    console.log(req.body.obj)
+    console.log(docs)
     docs[0].title = req.body.obj.title
     docs[0].articleContent = req.body.obj.articleContent
     // 不更新文章更改时间
@@ -204,12 +216,23 @@ router.post('/api/saveArticleLabel', function (req, res) {
     if (isExist) {
       res.json({error: true, msg: '标签已存在'})
     } else {
-      new db.TagList(req.body.tagList).save(function (error) {
-        if (error) {
-          res.send('保存失败');
+      db.User.findOne({account: req.session.loginUser}, '_id', function (err, uid) {
+        if (err) {
           return
         }
-        res.send()
+        let tag = {
+          tagName: req.body.tagList.tagName,
+          uid: uid._id,
+          tagNumber: 0
+        }
+        new db.TagList(tag).save(function (error, result) {
+          if (error) {
+            console.log(error)
+            res.send('保存失败');
+            return
+          }
+          res.send(result)
+        })
       })
     }
   })
