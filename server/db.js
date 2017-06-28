@@ -4,6 +4,7 @@ mongoose.Promise = require('bluebird')
 mongoose.connect('mongodb://localhost:27017/blog')
 
 var userSchema = new mongoose.Schema({
+  account: String,
   name: String,
   pwd: String,
   individualitySignature: String,

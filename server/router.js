@@ -3,23 +3,29 @@ var router = express.Router();
 var users = require('./user').items;
 var db = require('./db');
 
-var findUser = function (name, password) {
+var findUser = function (account, pwd) {
   return users.find(function (item) {
-    return item.name === name && item.password === password;
+    return item.account === account && item.pwd === pwd;
   });
 };
 // 登录接口
 router.post('/api/login', function (req, res) {
   var sess = req.session;
-  var user = findUser(req.body.name, req.body.pwd);
-
+  var user = findUser(req.body.account, req.body.pwd);
+  console.log(user)
   if (user) {
     req.session.regenerate(function (err) {
       if (err) {
         return res.json({code: 2, msg: '登录失败'});
       }
-      req.session.loginUser = user.name;
-      res.json({code: 0, msg: '登录成功'});
+      req.session.loginUser = user.account;
+      db.User(user).save(function(err) {
+        if (err) {
+          res.status(500).send;
+          return
+        }
+        res.json({code: 0, msg: '登录成功'});
+      })
     });
   } else {
     res.json({code: 1, msg: '账号或密码错误'});

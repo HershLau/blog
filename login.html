@@ -124,7 +124,7 @@ window.onload = function(){
         xhr.open("post", '/api/login', false);
         xhr.setRequestHeader("Content-Type", "application/json");
         var obj = {
-            name: document.querySelector('.login-name').value,
+            account: document.querySelector('.login-name').value,
             pwd: document.querySelector('.login-pwd').value
         }
         xhr.send(JSON.stringify(obj))

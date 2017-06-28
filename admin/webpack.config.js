@@ -49,7 +49,7 @@ module.exports = {
       noInfo: true,
       proxy: [
           {
-              context: ['/api'],
+              context: ['/api', '/'],
               target: 'http://localhost:7000',
               changeOrigin: true,
               secure: false

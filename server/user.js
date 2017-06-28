@@ -1,5 +1,6 @@
 module.exports = {
     items: [
-        {name: 'admin', password: '123456'}
+        {account: 'admin', pwd: '123456'},
+        {account: 'hersh', pwd: '111'}
     ]
 }
