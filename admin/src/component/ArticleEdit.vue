@@ -11,7 +11,7 @@
                     </ul>
                 </el-popover>
                 <img src="../assets/tag.png" height="30" width="30" v-popover:tag>
-                <el-tag v-for="(item,index) in list" :closable="true" type="success" :key="index" :close-transition="false" @close="handleClose(tag)">
+                <el-tag v-for="(item,index) in list" :closable="true" type="success" :key="index" :close-transition="false" @close="handleClose(index)">
                     {{item.tagName}}
                 </el-tag>
             </div>
@@ -165,21 +165,15 @@ export default {
                 )
     	    } else {
     	        // 新建保存
-    	        if(this.list.length>0){
-                    var labelName = this.list[0].tagName;
-                } else {
-                    var labelName = '未分类'
-                }
-                var obj = {
-                    title: self.articleTitle,
-                    articleContent: self.content,
-                    date: new Date().format('yyyy-MM-dd hh:mm:ss'),
-                    state: 'draft',
-                    label: labelName
-                }
-                this.$http.post('/api/saveArticle', {
-                    articleInformation: obj
-                }).then(
+              console.log(this.list)
+              var obj = {
+                title: self.articleTitle,
+                articleContent: self.content,
+                date: new Date().format('yyyy-MM-dd hh:mm:ss'),
+                state: 'draft',
+                tags: this.list
+              }
+                this.$http.post('/api/saveArticle', obj).then(
                     respone => {
                         Message.success('文章保存成功')
                         // 如果文章信息保存成功就给父组件派发一个事件通知它刷新文章列表
@@ -223,21 +217,14 @@ export default {
                 )
     	    } else {
     	        // 新建发布
-                if(this.list.length>0){
-                    var labelName = this.list[0].tagName
-                } else {
-                    var labelName = '未分类'
-                }
                 var obj = {
                     title: self.articleTitle,
                     articleContent: self.content,
                     date: new Date().format('yyyy-MM-dd hh:mm:ss'),
                     state: 'publish',
-                    label: labelName
+                    tags: this.list
                 }
-                this.$http.post('/api/saveArticle', {
-                    articleInformation: obj
-                }).then(
+                this.$http.post('/api/saveArticle', obj).then(
                     respone => {
                         Message.success('文章发布成功')
                         // 如果文章信息保存成功就给父组件派发一个事件通知它刷新文章列表
@@ -248,11 +235,10 @@ export default {
             }
         },
         selectTag: function(data){
-            this.list = []
             this.list.push(data)
         },
         handleClose: function(tag) {
-            this.list.splice(this.tags.indexOf(tag), 1);
+          this.list.splice(tag, 1);
         }
     },
     directives: {

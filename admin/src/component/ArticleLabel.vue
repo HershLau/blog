@@ -10,7 +10,7 @@
                 <li v-for="item in articleLabel" @click="labelClassification(item.tagName)">
                     <img src="../assets/labels.png" height="17" width="17">
                     <h3 class="articleLabel-title">{{item.tagName}} <span
-                            style="color:#7e7e7e;">({{item.tagNumber}})</span></h3>
+                            style="color:#7e7e7e;">({{item.aids.length}})</span></h3>
                 </li>
             </ul>
             <el-input class="tagName-input" v-if="isTagInputShow" v-model="tagName" placeholder="请输入标签名添加">

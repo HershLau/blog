@@ -90,7 +90,10 @@ export default{
         // 接受ArtcleEdit组件派发的事件去获取最新的文章列表
         refreshArticleList: function(){
             this.$http.get('api/admin/articleList').then(
-                respone => this.articleList = respone.body.reverse(),
+                respone => {
+                  this.articleList = respone.body.reverse()
+                  console.log(respone.body)
+                },
                 respone => console.log(respone)
             )
         },

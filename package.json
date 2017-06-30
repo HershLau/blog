@@ -10,7 +10,7 @@
     "server": "supervisor ./app.js"
   },
   "dependencies": {
-    "bluebird": "^3.4.7",
+    "bluebird": "^3.5.0",
     "body-parser": "^1.15.2",
     "compression-webpack-plugin": "^0.4.0",
     "element-ui": "^1.0.5",

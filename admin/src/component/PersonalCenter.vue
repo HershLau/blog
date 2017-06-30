@@ -33,7 +33,7 @@ export default{
     },
     mounted: function(){
         this.$http.get('/api/personalInformation').then(
-            respone => this.form = respone.body[0],
+            respone => this.form = respone.body,
             respone => this.$message.error('服务器出错，请重新刷新页面')
         )
     },

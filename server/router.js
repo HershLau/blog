@@ -2,6 +2,8 @@ var express = require('express');
 var router = express.Router();
 var users = require('./user').items;
 var db = require('./db');
+var Promise = require("bluebird");
+var mongoose = require('mongoose');
 
 var findUser = function (account, pwd) {
   return users.find(function (item) {
@@ -23,14 +25,16 @@ router.post('/api/login', function (req, res) {
           return
         }
         if (!doc) {
-          db.User(user).save(function(err) {
+          db.User(user).save(function(err, res) {
             if (err) {
               res.status(500).send;
               return
             }
+            req.session.uid = res._id;
             res.json({code: 0, msg: '登录成功'});
           })
         } else  {
+          req.session.uid = doc._id;
           res.json({code: 0, msg: '登录成功'});
         }
       })
@@ -72,7 +76,20 @@ router.get('/api/admin/articleList', function (req, res) {
       console.log('出错' + err);
       return
     }
-    res.json(docs)
+    var list = []
+    docs.forEach(function (doc) {
+      doc.tags.forEach(function (t) {
+        t = mongoose.Types.ObjectId(t)
+      })
+      var p = db.TagList.find({ _id: { $in: doc.tags } })
+      list.push(p)
+    })
+    Promise.all(list).then(function (res) {
+      console.log(res)
+    }).catch(function (err) {
+      console.error('err:' + err)
+    })
+    // res.json(docs)
   })
 });
 // 查询文章列表路由(根据标签返回对应的文章列表) 用于博客后端管理系统包含草稿和已发布文章数据
@@ -104,20 +121,35 @@ router.post('/api/articleDetails', function (req, res) {
 });
 // 文章保存路由
 router.post('/api/saveArticle', function (req, res) {
-  new db.Article(req.body.articleInformation).save(function (error) {
+  var list = req.body.tags.map(function (e) {
+    return e._id
+  })
+  let article = {
+    title: req.body.title,
+    date: req.body.date,
+    articleContent: req.body.articleContent,
+    state: req.body.state,
+    uid: req.session.uid,
+    tags: list
+  }
+  new db.Article(article).save(function (error) {
     if (error) {
       res.status(500).send()
       return
     }
-    if (req.body.articleInformation.state != 'draft') {
-      db.Article.find({label:req.body.articleInformation.label},function(err, ArticleList){
+    if (req.body.state != 'draft') {
+      db.Article.find({label:req.body.label},function(err, ArticleList){
         if (err) {
           return
         }
-        db.TagList.find({tagName:req.body.articleInformation.label}, function(err, docs){
+        let aids = []
+        ArticleList.forEach(function(e) {
+          aids.push(e._id)
+        })
+        db.TagList.find({tagName:req.body.label}, function(err, docs){
           if(docs.length>0){
-            console.log(ArticleList.length)
-            docs[0].tagNumber = ArticleList.length
+            docs[0].aids = aids
+            docs[0].tagNumber = docs[0].aids.length
             db.TagList(docs[0]).save(function(error){})
           }
         })
@@ -129,25 +161,43 @@ router.post('/api/saveArticle', function (req, res) {
 
 // 文章更新路由
 router.post('/api/updateArticle', function (req, res) {
-  db.Article.find({_id: req.body.obj._id}, function (err, docs) {
+  db.Article.findOne({_id: req.body.obj._id}, function (err, doc) {
     if (err) {
       return
     }
-    console.log(req.body.obj)
-    console.log(docs)
-    docs[0].title = req.body.obj.title
-    docs[0].articleContent = req.body.obj.articleContent
-    // 不更新文章更改时间
-    docs[0].date = docs[0].date
-    docs[0].state = req.body.obj.state
-    docs[0].label = req.body.obj.label
-    db.Article(docs[0]).save(function (err) {
+    db.TagList.update({})
+    db.TagList.find({ $or: [ { tagName: req.body.obj.label}, {tagName: doc.label} ] }, function (err, tags) {
       if (err) {
-        res.status(500).send();
         return
       }
-      res.send()
+      tags.forEach(function (e) {
+        if (e.tagName == req.body.obj.label) {
+
+        }
+        if (e.tagName == doc.label) {
+          e.tagNumber -= 1
+        }
+      })
+      db.TagList(tags).save(function (err) {
+        if (err) {
+          return
+        }
+        doc.title = req.body.obj.title
+        doc.articleContent = req.body.obj.articleContent
+        // 不更新文章更改时间
+        doc.date = doc.date
+        doc.state = req.body.obj.state
+        doc.label = req.body.obj.label
+        db.Article(doc).save(function (err) {
+          if (err) {
+            res.status(500).send();
+            return
+          }
+          res.send()
+        })
+      })
     })
+
   })
 });
 
@@ -164,41 +214,7 @@ router.post('/api/delect/article', function (req, res) {
 
 // 文章标签查询路由
 router.get('/api/getArticleLabel', function (req, res) {
-  // db.Article.find({},function(err, docs){
-  //     if (err) {
-  //         return
-  //     }
-  //     var tagList = [];
-  //     var tagObj = {};
-  //     for (let i=0; i<docs.length; i++){
-  //         let item = docs[i];
-  //         if (tagObj[item.label] === undefined){
-  //             tagObj[item.label] = tagList.length
-  //             tagList.push({
-  //                 tagName: item.label,
-  //                 tagNumber: 1
-  //             })
-  //         }else{
-  //             tagList[tagObj[item.label]].tagNumber++
-  //         }
-  //     }
-  //     db.TagList.find({}, function(err, docs){
-  //         if(err)return;
-  //         var resultTagList = [];
-  //         for (var j=0; j<docs.length; j++){
-  //             for (var i=0; i<tagList.length; i++){
-  //                 if (tagList[i].tagName == docs[j].tagName){
-  //                     resultTagList.push(tagList[i])
-  //                 }else if (docs[j].tagNumber==0){
-  //                     resultTagList.push(docs[j])
-  //                     break;
-  //                 }
-  //             }
-  //         }
-  //         res.json(resultTagList)
-  //     })
-  // })
-  db.TagList.find({}, function (err, docs) {
+  db.TagList.find({uid: req.session.uid}, function (err, docs) {
     if (err)return;
     res.json(docs)
   })
@@ -216,23 +232,18 @@ router.post('/api/saveArticleLabel', function (req, res) {
     if (isExist) {
       res.json({error: true, msg: '标签已存在'})
     } else {
-      db.User.findOne({account: req.session.loginUser}, '_id', function (err, uid) {
-        if (err) {
+      let tag = {
+        tagName: req.body.tagList.tagName,
+        uid: req.session.uid,
+        aids: []
+      }
+      new db.TagList(tag).save(function (error, result) {
+        if (error) {
+          console.log(error)
+          res.send('保存失败');
           return
         }
-        let tag = {
-          tagName: req.body.tagList.tagName,
-          uid: uid._id,
-          tagNumber: 0
-        }
-        new db.TagList(tag).save(function (error, result) {
-          if (error) {
-            console.log(error)
-            res.send('保存失败');
-            return
-          }
-          res.send(result)
-        })
+        res.send(result)
       })
     }
   })
@@ -268,7 +279,7 @@ router.post('/api/save/personalInformation', function (req, res) {
 })
 
 router.get('/api/personalInformation', function (req, res) {
-  db.User.find({}, function (err, doc) {
+  db.User.findOne({_id: req.session.uid}, function (err, doc) {
     if (err) {
       res.status(500).send();
       return
