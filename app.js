@@ -48,7 +48,6 @@ app.get('/', function(req, res) {
 
 // 退出登录
 app.get('/logout', function(req, res){
-  console.log('aaa')
   // 备注：这里用的 session-file-store 在destroy 方法里，并没有销毁cookie
   // 所以客户端的 cookie 还是存在，导致的问题 --> 退出登陆后，服务端检测到cookie
   // 然后去查找对应的 session 文件，报错

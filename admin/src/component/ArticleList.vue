@@ -12,7 +12,7 @@
                         {{item.title}}
                     </h3>
                     <p>{{new Date(item.date).format('yyyy-MM-dd hh:mm:ss')}}
-                        <span class="label-item">{{item.label}}</span>
+                        <span v-for="tag in item.tagList" class="label-item">{{tag.tagName}}</span>
                     </p>
                 </li>
             </ul>
@@ -75,7 +75,9 @@ export default{
     methods: {
         fetchData: function(){
             this.$http.get('api/admin/articleList').then(
-                respone => this.articleList = respone.body.reverse(),
+                respone => {
+                  this.articleList = respone.body.reverse()
+                   },
                 respone => console.log(respone)
             )
         },
@@ -92,7 +94,6 @@ export default{
             this.$http.get('api/admin/articleList').then(
                 respone => {
                   this.articleList = respone.body.reverse()
-                  console.log(respone.body)
                 },
                 respone => console.log(respone)
             )

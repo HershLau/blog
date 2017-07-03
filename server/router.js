@@ -71,25 +71,37 @@ router.post('/api/articleList', function (req, res) {
 });
 // 查询文章列表路由 用于博客后端管理系统包含草稿和已发布文章数据
 router.get('/api/admin/articleList', function (req, res) {
-  db.Article.find({}, function (err, docs) {
+  db.Article.find({uid: req.session.uid}, function (err, docs) {
     if (err) {
       console.log('出错' + err);
       return
     }
     var list = []
-    docs.forEach(function (doc) {
-      doc.tags.forEach(function (t) {
-        t = mongoose.Types.ObjectId(t)
+    var articles = []
+    docs.forEach(function (article) {
+      var ele = {
+        _id: article._id,
+        title: article.title,
+        date: article.date,
+        articleContent: article.articleContent,
+        state: article.state,
+        uid: article.uid,
+        tagList: []
+      }
+      var arr = article.tags.map(function(x) {
+        return mongoose.Types.ObjectId(x)
       })
-      var p = db.TagList.find({ _id: { $in: doc.tags } })
+      var p = db.TagList.find({ _id: { $in: arr} }, function (err, tags) {
+        ele.tagList = tags
+      })
+      articles.push(ele)
       list.push(p)
     })
-    Promise.all(list).then(function (res) {
-      console.log(res)
+    Promise.all(list).then(function () {
+      res.json(articles)
     }).catch(function (err) {
       console.error('err:' + err)
     })
-    // res.json(docs)
   })
 });
 // 查询文章列表路由(根据标签返回对应的文章列表) 用于博客后端管理系统包含草稿和已发布文章数据
@@ -112,17 +124,29 @@ router.get('/api/articleDetails/:id', function (req, res) {
   })
 });
 router.post('/api/articleDetails', function (req, res) {
-  db.Article.findOne({_id: req.body.id}, function (err, docs) {
+  db.Article.findOne({_id: req.body.id}, function (err, doc) {
     if (err) {
       return
     }
-    res.send(docs)
+    db.TagList.find({ _id: { $in: doc.tags} }, function (err, tags) {
+      var article = {
+        _id: doc._id,
+        title: doc.title,
+        date: doc.date,
+        articleContent: doc.articleContent,
+        state: doc.state,
+        uid: doc.uid,
+        tagList: []
+      }
+      article.tagList = tags
+      res.send(article)
+    })
   })
 });
-// 文章保存路由
+// 文章新增路由
 router.post('/api/saveArticle', function (req, res) {
   var list = req.body.tags.map(function (e) {
-    return e._id
+    return mongoose.Types.ObjectId(e._id)
   })
   let article = {
     title: req.body.title,
@@ -132,27 +156,21 @@ router.post('/api/saveArticle', function (req, res) {
     uid: req.session.uid,
     tags: list
   }
-  new db.Article(article).save(function (error) {
+  console.log(list)
+  new db.Article(article).save(function (error, doc) {
     if (error) {
       res.status(500).send()
       return
     }
     if (req.body.state != 'draft') {
-      db.Article.find({label:req.body.label},function(err, ArticleList){
-        if (err) {
-          return
-        }
-        let aids = []
-        ArticleList.forEach(function(e) {
-          aids.push(e._id)
-        })
-        db.TagList.find({tagName:req.body.label}, function(err, docs){
-          if(docs.length>0){
-            docs[0].aids = aids
-            docs[0].tagNumber = docs[0].aids.length
-            db.TagList(docs[0]).save(function(error){})
-          }
-        })
+      var tasks = []
+      list.forEach(function(id) {
+        var p = db.TagList.update({ _id: id }, {$push: {aids: doc._id}})
+        tasks.push(p)
+      })
+      Promise.all(tasks).then(function() {
+      }).catch(function(err) {
+        res.status(500).send(err)
       })
     }
     res.send()
@@ -161,11 +179,41 @@ router.post('/api/saveArticle', function (req, res) {
 
 // 文章更新路由
 router.post('/api/updateArticle', function (req, res) {
+  var arr = req.body.obj.tagList.map(function(x) {
+    return mongoose.Types.ObjectId(x._id)
+  })
   db.Article.findOne({_id: req.body.obj._id}, function (err, doc) {
     if (err) {
       return
     }
-    db.TagList.update({})
+    if (req.body.obj.state == 'publish') {
+      console.log(doc._id)
+      doc.tags = []
+      db.Article(doc).save(function (err) {
+        if (err) {
+          res.status(500).send();
+          return
+        }
+        var ids = []
+        ids.push(doc._id)
+        db.tagList.find({aids: {$in: ids}}, function (err, tags) {
+          console.log(tags)
+        })
+      })
+    }
+    doc.title = req.body.obj.title
+    doc.articleContent = req.body.obj.articleContent
+    // 不更新文章更改时间
+    doc.date = doc.date
+    doc.state = req.body.obj.state
+    doc.tags = arr
+    db.Article(doc).save(function (err) {
+      if (err) {
+        res.status(500).send();
+        return
+      }
+      res.send()
+    })
     db.TagList.find({ $or: [ { tagName: req.body.obj.label}, {tagName: doc.label} ] }, function (err, tags) {
       if (err) {
         return
@@ -177,24 +225,6 @@ router.post('/api/updateArticle', function (req, res) {
         if (e.tagName == doc.label) {
           e.tagNumber -= 1
         }
-      })
-      db.TagList(tags).save(function (err) {
-        if (err) {
-          return
-        }
-        doc.title = req.body.obj.title
-        doc.articleContent = req.body.obj.articleContent
-        // 不更新文章更改时间
-        doc.date = doc.date
-        doc.state = req.body.obj.state
-        doc.label = req.body.obj.label
-        db.Article(doc).save(function (err) {
-          if (err) {
-            res.status(500).send();
-            return
-          }
-          res.send()
-        })
       })
     })
 

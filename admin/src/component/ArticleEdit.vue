@@ -95,9 +95,7 @@ export default {
             }).then(
                 respone => {
                     this.articleTitle = respone.body.title,
-                    this.list.push({
-                        tagName: respone.body.label
-                    }),
+                    this.list = respone.body.tagList
                     smde.value(respone.body.articleContent)
                 },
                 respone => console.log(respone)
@@ -110,6 +108,7 @@ export default {
         this.$http.get('/api/getArticleLabel').then(
             respone => {
                 this.tags =  respone.body
+              console.log(this.tags)
             },
             respone => {
                 Message.error('数据出错，请重新刷新页面')
@@ -138,18 +137,13 @@ export default {
     	    var self = this
     	    if(this.$route.query.id){
     	        // 更新
-    	        if(this.list.length>0){
-                    var labelName = this.list[0].tagName;
-                } else {
-                    var labelName = '未分类'
-                }
     	        var obj = {
     	            _id: this.$route.query.id,
                     title: self.articleTitle,
                     articleContent: self.content,
                     date: new Date().format('yyyy-MM-dd hh:mm:ss'),
                     state: 'draft',
-                    label: labelName
+                    tagList: this.list
                 }
                 this.$http.post('/api/updateArticle',{
                     obj: obj
@@ -165,7 +159,6 @@ export default {
                 )
     	    } else {
     	        // 新建保存
-              console.log(this.list)
               var obj = {
                 title: self.articleTitle,
                 articleContent: self.content,
@@ -190,18 +183,13 @@ export default {
         	var self = this
         	if(this.$route.query.id){
     	        // 更新
-    	        if(this.list.length>0){
-                    var labelName = this.list[0].tagName;
-                } else {
-                    var labelName = '未分类'
-                }
     	        var obj = {
     	            _id: this.$route.query.id,
                     title: self.articleTitle,
                     articleContent: self.content,
                     date: new Date().format('yyyy-MM-dd hh:mm:ss'),
                     state: 'publish',
-                    label: labelName
+                    tagList: this.list
                 }
                 this.$http.post('/api/updateArticle',{
                     obj: obj
